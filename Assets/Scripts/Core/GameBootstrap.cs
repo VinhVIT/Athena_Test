@@ -5,7 +5,7 @@ public class GameBootstrap : MonoBehaviour
     [SerializeField] private ScreenRouter screenRouter;
     [SerializeField] private HUDPresenter hudPresenter;
     [SerializeField] private Match3Board board;
-    [SerializeField] private Match3RuleSet[] levels;
+    [SerializeField] private LevelData[] levels;
 
     private readonly GameStateMachine stateMachine = new();
     private readonly LevelSession levelSession = new();
@@ -25,10 +25,10 @@ public class GameBootstrap : MonoBehaviour
     public void StartLevel(int levelIndex)
     {
         currentLevel = Mathf.Clamp(levelIndex, 0, levels.Length - 1);
-        var rules = levels[currentLevel];
+        var levelData = levels[currentLevel];
 
-        levelSession.Start(currentLevel, rules.movesLimit);
-        board.Build(rules);
+        levelSession.Start(currentLevel, levelData.movesLimit);
+        board.Build(levelData);
         stateMachine.ChangeState(GameFlowState.Playing);
     }
 

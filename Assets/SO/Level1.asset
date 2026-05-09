@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e116d32b3063c444a0490397e9a80c2, type: 3}
   m_Name: Level1
   m_EditorClassIdentifier: 
-  width: 7
-  height: 7
-  tileType:
-  - {fileID: 21300000, guid: 093363a40d9c07a4082e1c0f82d20fc3, type: 3}
-  - {fileID: 21300000, guid: fbdc2dd4941e61244980c24b6aaea0de, type: 3}
+  width: 8
+  height: 8
+  availableTiles:
+  - {fileID: 11400000, guid: c55956d841c6c5844992832c859c65e7, type: 2}
+  - {fileID: 11400000, guid: 32b1e35371461a64198c71964d7db5aa, type: 2}
+  - {fileID: 11400000, guid: 4fa81965c48486a4db6ac18740ae7879, type: 2}
+  - {fileID: 11400000, guid: 2f582280bc4b5374a8ffaa86c667f23f, type: 2}
   movesLimit: 25
   targetScore: 1500

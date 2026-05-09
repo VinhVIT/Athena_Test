@@ -21,7 +21,7 @@ ProjectAssetsFile=<PATH>Temp/obj/Assembly-CSharp/project.assets.json
 RootNamespace=
 RunAnalyzers=
 RunAnalyzersDuringLiveAnalysis=
-SolutionPath=<PATH>My project.sln
+SolutionPath=<PATH>Athena_Test.sln
 TargetFrameworkIdentifier=.NETStandard
 TargetPath=<PATH>Temp/bin/Debug/Assembly-CSharp.dll
 TargetRefPath=
@@ -55,10 +55,14 @@ Assets/Scripts/Core/
  GameStateMachine.cs
  LevelSession.cs
 Assets/Scripts/Gameplay/
+ BoardRefiller.cs
+ BoardShuffler.cs
+ LevelData.cs
  Match3Board.cs
- Match3RuleSet.cs
+ MatchFinder.cs
 Assets/Scripts/
  Tile.cs
+ TileData.cs
  UI/
   HUDPresenter.cs
   ScreenRouter.cs

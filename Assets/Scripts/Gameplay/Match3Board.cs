@@ -5,38 +5,48 @@ using UnityEngine;
 public class Match3Board : MonoBehaviour
 {
     [Header("Board")]
-    [SerializeField] private GameObject tile;
+    [SerializeField] private Tile tilePrefab;
+    [SerializeField] private int scorePerMatch = 10;
     private LevelSession session;
-    private Match3RuleSet activeRuleSet;
-
-    private GameObject[,] tiles;
-
+    private LevelData currentLevelData;
+    private Tile[,] tiles;
+    private Tile selectedTile;
+    private int width;
+    private int height;
+    private Vector2 tileSize;
     public bool IsShifting { get; set; }
-
     public event Action<bool> OnRunFinished;
-
+    private MatchFinder matchFinder;
+    private BoardRefiller boardRefiller;
+    private BoardShuffler boardShuffler;
     public void Bind(LevelSession levelSession)
     {
         session = levelSession;
     }
-    //Build Board when level start
-    public void Build(Match3RuleSet ruleSet)
+
+    public void Build(LevelData levelData)
     {
-        activeRuleSet = ruleSet;
+        currentLevelData = levelData;
+
+        width = currentLevelData.width;
+        height = currentLevelData.height;
+
+        tileSize = tilePrefab.GetComponent<SpriteRenderer>().bounds.size;
 
         ClearBoard();
-
-        Vector2 offset = tile.GetComponent<SpriteRenderer>().bounds.size;
-
-        CreateBoard(activeRuleSet.width, activeRuleSet.height, activeRuleSet.tileType, offset.x, offset.y);
+        CreateBoard();
+        matchFinder = new MatchFinder(tiles, width, height);
+        boardShuffler = new BoardShuffler(tiles, width, height, matchFinder, this);
+        boardRefiller = new BoardRefiller(tiles, width, height, tilePrefab, transform,
+            tileSize, currentLevelData, this);
     }
 
-    private void CreateBoard(int width, int height, List<Sprite> tileType, float xOffset, float yOffset)
+    private void CreateBoard()
     {
-        tiles = new GameObject[width, height];
+        tiles = new Tile[width, height];
 
-        float boardWidth = (width - 1) * xOffset;
-        float boardHeight = (height - 1) * yOffset;
+        float boardWidth = (width - 1) * tileSize.x;
+        float boardHeight = (height - 1) * tileSize.y;
 
         float startX = transform.position.x - boardWidth / 2f;
         float startY = transform.position.y - boardHeight / 2f;
@@ -45,12 +55,14 @@ public class Match3Board : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                Vector3 spawnPosition = new Vector3(startX + (xOffset * x), startY + (yOffset * y), 0);
+                Vector3 spawnPosition = new Vector3(startX + (x * tileSize.x),
+                    startY + (y * tileSize.y), 0);
+                Tile spawned = Instantiate(tilePrefab, spawnPosition, Quaternion.identity,
+                    transform);
 
-                GameObject newTile = Instantiate(tile, spawnPosition, Quaternion.identity);
-                tiles[x, y] = newTile;
+                tiles[x, y] = spawned;
 
-                RandomTile(newTile, tileType);
+                SetupRandomTileWithoutMatch(spawned, x, y);
             }
         }
     }
@@ -59,19 +71,182 @@ public class Match3Board : MonoBehaviour
     {
         if (tiles == null)
             return;
-
-        foreach (GameObject tileObject in tiles)
+        foreach (Tile tile in tiles)
         {
-            if (tileObject != null)
+            if (tile != null)
             {
-                Destroy(tileObject);
+                Destroy(tile.gameObject);
             }
         }
     }
-    private void RandomTile(GameObject tile, List<Sprite> tileType)
+
+    private void SetupRandomTileWithoutMatch(Tile tile, int x, int y)
     {
-        tile.transform.parent = transform;
-        Sprite newSprite = tileType[UnityEngine.Random.Range(0, tileType.Count)];
-        tile.GetComponent<SpriteRenderer>().sprite = newSprite;
+        List<TileData> availableTiles = new List<TileData>(currentLevelData.availableTiles);
+        TileData selectedTileData = null;
+
+        while (availableTiles.Count > 0)
+        {
+            int randomIndex = UnityEngine.Random.Range(0, availableTiles.Count);
+            TileData randomTile = availableTiles[randomIndex];
+            bool createsMatch = CreatesMatchAt(x, y, randomTile.type);
+
+            if (!createsMatch)
+            {
+                selectedTileData = randomTile;
+                break;
+            }
+            availableTiles.RemoveAt(randomIndex);
+        }
+
+        if (selectedTileData == null)
+        {
+            selectedTileData = currentLevelData.availableTiles[0];
+        }
+        tile.Setup(x, y, selectedTileData, this);
+    }
+
+    private bool CreatesMatchAt(int x, int y, TileType type)
+    //only check left and down because board is generated from bottom-left to top-right 
+    {
+        // Horizontal
+        if (x >= 2)
+        {
+            Tile left1 = tiles[x - 1, y];
+            Tile left2 = tiles[x - 2, y];
+            if (left1 != null && left2 != null && left1.Data.type == type && left2.Data.type == type)
+            {
+                return true;
+            }
+        }
+        // Vertical
+        if (y >= 2)
+        {
+            Tile down1 = tiles[x, y - 1];
+            Tile down2 = tiles[x, y - 2];
+            if (down1 != null && down2 != null && down1.Data.type == type && down2.Data.type == type)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public void SelectTile(Tile tile)
+    {
+        if (IsShifting)
+            return;
+        // First selection
+        if (selectedTile == null)
+        {
+            selectedTile = tile;
+            selectedTile.SetSelected(true);
+            return;
+        }
+        // Click same tile
+        if (selectedTile == tile)
+        {
+            selectedTile.SetSelected(false);
+            selectedTile = null;
+            return;
+        }
+        bool isAdjacent = IsAdjacent(selectedTile, tile);
+        // Valid pair
+        if (isAdjacent)
+        {
+            selectedTile.SetSelected(false);
+            TrySwap(selectedTile, tile);
+            selectedTile = null;
+        }
+        else
+        {
+            selectedTile.SetSelected(false);
+            selectedTile = tile;
+            selectedTile.SetSelected(true);
+        }
+    }
+
+    private bool IsAdjacent(Tile a, Tile b)
+    {
+        int xDifference = Mathf.Abs(a.X - b.X);
+        int yDifference = Mathf.Abs(a.Y - b.Y);
+
+        return xDifference + yDifference == 1;
+    }
+    private void TrySwap(Tile firstTile, Tile secondTile)
+    {
+        SwapTiles(firstTile, secondTile);
+
+        List<Tile> matchedTiles = new List<Tile>();
+
+        matchedTiles.AddRange(matchFinder.GetMatchTilesAt(firstTile.X, firstTile.Y));
+        matchedTiles.AddRange(matchFinder.GetMatchTilesAt(secondTile.X, secondTile.Y));
+
+        if (matchedTiles.Count == 0)
+        {
+            SwapTiles(firstTile, secondTile);
+        }
+        else
+        {
+            session.ConsumeMove();
+            ProcessMatches(matchedTiles);
+            CheckGameState();
+        }
+    }
+    private void SwapTiles(Tile a, Tile b)
+    {
+        int aX = a.X;
+        int aY = a.Y;
+
+        int bX = b.X;
+        int bY = b.Y;
+
+        // Swap in grid
+        tiles[aX, aY] = b;
+        tiles[bX, bY] = a;
+
+        // Update coordinates
+        a.SetGridPosition(bX, bY);
+        b.SetGridPosition(aX, aY);
+
+        // Swap world positions
+        Vector3 tempPosition = a.transform.position;
+
+        a.transform.position = b.transform.position;
+        b.transform.position = tempPosition;
+    }
+    private void ProcessMatches(List<Tile> matchedTiles)
+    {
+        //Score add
+        int gainedScore = matchedTiles.Count * scorePerMatch;
+        session.AddScore(gainedScore);
+
+        boardRefiller.DestroyMatches(matchedTiles);
+        boardRefiller.CollapseColumns();
+        boardRefiller.RefillBoard();
+
+        List<Tile> cascadeMatches = matchFinder.FindAllMatches();
+
+        if (cascadeMatches.Count > 0)
+        {
+            ProcessMatches(cascadeMatches);
+            return;
+        }
+
+        if (!boardShuffler.HasAnyValidMove())
+        {
+            boardShuffler.ShuffleBoard();
+        }
+    }
+    private void CheckGameState()
+    {
+        if (session.Score >= currentLevelData.targetScore)
+        {
+            OnRunFinished?.Invoke(true);
+            return;
+        }
+        if (session.MovesLeft <= 0)
+        {
+            OnRunFinished?.Invoke(false);
+        }
     }
 }

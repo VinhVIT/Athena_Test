@@ -1,35 +1,40 @@
 ﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 
 public class Tile : MonoBehaviour
 {
-	private static Color selectedColor = new Color(.5f, .5f, .5f, 1.0f);
-	private static Tile previousSelected = null;
-
-	private SpriteRenderer render;
-	private bool isSelected = false;
-
-	private Vector2[] adjacentDirections = new Vector2[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-
-	void Awake()
+	[Header("Visual")]
+	[SerializeField] private SpriteRenderer spriteRenderer;
+	public TileData Data { get; private set; }
+	public int X { get; private set; }
+	public int Y { get; private set; }
+	private Match3Board board;
+	public void Setup(int x, int y, TileData data, Match3Board board)
 	{
-		render = GetComponent<SpriteRenderer>();
-	}
+		SetGridPosition(x, y);
 
-	private void Select()
+		Data = data;
+		this.board = board;
+		spriteRenderer.sprite = data.sprite;
+	}
+	private void OnMouseDown()
 	{
-		isSelected = true;
-		render.color = selectedColor;
-		previousSelected = gameObject.GetComponent<Tile>();
-		// SFXManager.instance.PlaySFX(Clip.Select);
+		board.SelectTile(this);
 	}
-
-	private void Deselect()
+	public void SetSelected(bool selected)
 	{
-		isSelected = false;
-		render.color = Color.white;
-		previousSelected = null;
+		spriteRenderer.color = selected ? Color.gray : Color.white;
 	}
-
+	public void SetGridPosition(int x, int y)
+	{
+		X = x;
+		Y = y;
+	}
+}
+public enum TileType
+{
+	Red,
+	Blue,
+	Green,
+	Yellow,
+	Purple
 }
