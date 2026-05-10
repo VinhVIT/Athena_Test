@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class Match3Board : MonoBehaviour
@@ -7,6 +9,9 @@ public class Match3Board : MonoBehaviour
     [Header("Board")]
     [SerializeField] private Tile tilePrefab;
     [SerializeField] private int scorePerMatch = 10;
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private FloatingText floatingTextPrefab;
+    [SerializeField] private Canvas worldCanvas;
     private LevelSession session;
     private LevelData currentLevelData;
     private Tile[,] tiles;
@@ -154,7 +159,7 @@ public class Match3Board : MonoBehaviour
         if (isAdjacent)
         {
             selectedTile.SetSelected(false);
-            TrySwap(selectedTile, tile);
+            StartCoroutine(TrySwap(selectedTile, tile));
             selectedTile = null;
         }
         else
@@ -172,27 +177,49 @@ public class Match3Board : MonoBehaviour
 
         return xDifference + yDifference == 1;
     }
-    private void TrySwap(Tile firstTile, Tile secondTile)
+    private IEnumerator TrySwap(Tile firstTile, Tile secondTile)
     {
-        SwapTiles(firstTile, secondTile);
+        IsShifting = true;
 
-        List<Tile> matchedTiles = new List<Tile>();
+        // Swap logical positions first
+        SwapGrid(firstTile, secondTile);
+
+        // Play swap animation
+        yield return AnimateSwap(firstTile, secondTile);
+
+        List<Tile> matchedTiles = new();
 
         matchedTiles.AddRange(matchFinder.GetMatchTilesAt(firstTile.X, firstTile.Y));
+
         matchedTiles.AddRange(matchFinder.GetMatchTilesAt(secondTile.X, secondTile.Y));
 
+        // Invalid move
         if (matchedTiles.Count == 0)
         {
-            SwapTiles(firstTile, secondTile);
+            // Revert logical swap
+            SwapGrid(firstTile, secondTile);
+
+            // Animate back
+            yield return AnimateSwap(firstTile, secondTile);
+
+            Debug.Log("INVALID SWAP");
+
+            IsShifting = false;
+
+            yield break;
         }
-        else
-        {
-            session.ConsumeMove();
-            ProcessMatches(matchedTiles);
-            CheckGameState();
-        }
+
+        Debug.Log("VALID SWAP");
+
+        session.ConsumeMove();
+
+        yield return StartCoroutine(ProcessMatches(matchedTiles));
+
+        CheckGameState();
+
+        IsShifting = false;
     }
-    private void SwapTiles(Tile a, Tile b)
+    private void SwapGrid(Tile a, Tile b)
     {
         int aX = a.X;
         int aY = a.Y;
@@ -200,38 +227,40 @@ public class Match3Board : MonoBehaviour
         int bX = b.X;
         int bY = b.Y;
 
-        // Swap in grid
+        // Swap inside board array
         tiles[aX, aY] = b;
         tiles[bX, bY] = a;
 
         // Update coordinates
         a.SetGridPosition(bX, bY);
         b.SetGridPosition(aX, aY);
-
-        // Swap world positions
-        Vector3 tempPosition = a.transform.position;
-
-        a.transform.position = b.transform.position;
-        b.transform.position = tempPosition;
     }
-    private void ProcessMatches(List<Tile> matchedTiles)
+    private IEnumerator ProcessMatches(List<Tile> matchedTiles, int combo = 1)
     {
-        //Score add
-        int gainedScore = matchedTiles.Count * scorePerMatch;
+        int gainedScore = matchedTiles.Count * scorePerMatch * combo;
         session.AddScore(gainedScore);
+        Vector3 centerPosition = matchedTiles[0].transform.position;
+        ShowScoreText(centerPosition, gainedScore);
+        if (combo > 1)
+        {
+            ShowComboText(matchedTiles[0].transform.position, combo);
+        }
 
+        yield return AnimateDestroy(matchedTiles);
         boardRefiller.DestroyMatches(matchedTiles);
-        boardRefiller.CollapseColumns();
+        mainCamera.transform.DOShakePosition(0.1f, 0.08f);
+
+        yield return StartCoroutine(boardRefiller.CollapseColumns());
         boardRefiller.RefillBoard();
 
+        yield return new WaitForSeconds(0.35f);
         List<Tile> cascadeMatches = matchFinder.FindAllMatches();
 
         if (cascadeMatches.Count > 0)
         {
-            ProcessMatches(cascadeMatches);
-            return;
+            yield return StartCoroutine(ProcessMatches(cascadeMatches, combo + 1));
+            yield break;
         }
-
         if (!boardShuffler.HasAnyValidMove())
         {
             boardShuffler.ShuffleBoard();
@@ -249,4 +278,47 @@ public class Match3Board : MonoBehaviour
             OnRunFinished?.Invoke(false);
         }
     }
+    #region Animate
+    private IEnumerator AnimateSwap(Tile a, Tile b)
+    {
+        Vector3 aPosition = a.transform.position;
+        Vector3 bPosition = b.transform.position;
+
+        Tween moveA = a.transform.DOMove(bPosition, 0.15f).SetEase(Ease.OutQuad);
+        Tween moveB = b.transform.DOMove(aPosition, 0.15f).SetEase(Ease.OutQuad);
+
+        yield return moveA.WaitForCompletion();
+        yield return moveB.WaitForCompletion();
+    }
+    private IEnumerator AnimateDestroy(List<Tile> matchedTiles)
+    {
+        List<Tween> tweens = new();
+        foreach (Tile tile in matchedTiles)
+        {
+            if (tile == null)
+                continue;
+            tile.transform.DOPunchScale(Vector3.one * 0.2f, 0.15f);
+            Tween scaleTween = tile.transform.DOScale(Vector3.zero, 0.15f).SetEase(Ease.InBack);
+            tweens.Add(scaleTween);
+        }
+        foreach (Tween tween in tweens)
+        {
+            yield return tween.WaitForCompletion();
+        }
+    }
+    private void ShowScoreText(Vector3 worldPosition, int score)
+    {
+        Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition);
+        FloatingText text = Instantiate(floatingTextPrefab, screenPosition,
+            Quaternion.identity, worldCanvas.transform);
+        text.Setup($"+{score}", Color.yellow);
+    }
+    private void ShowComboText(Vector3 worldPosition, int combo)
+    {
+        Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition + Vector3.up * 0.5f);
+        FloatingText text = Instantiate(floatingTextPrefab, screenPosition,
+            Quaternion.identity, worldCanvas.transform);
+        text.Setup($"COMBO x{combo}", Color.red);
+    }
+    #endregion
 }

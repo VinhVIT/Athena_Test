@@ -1,35 +1,28 @@
+using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class BoardRefiller
 {
     private Match3Board board;
     private Tile[,] tiles;
-
     private int width;
     private int height;
-
     private Tile tilePrefab;
-
     private Transform boardParent;
-
     private Vector2 tileSize;
-
     private LevelData levelData;
 
-    public BoardRefiller(Tile[,] tiles, int width, int height, Tile tilePrefab, Transform boardParent, Vector2 tileSize, LevelData levelData, Match3Board board)
+    public BoardRefiller(Tile[,] tiles, int width, int height, Tile tilePrefab,
+        Transform boardParent, Vector2 tileSize, LevelData levelData, Match3Board board)
     {
         this.tiles = tiles;
-
         this.width = width;
         this.height = height;
-
         this.tilePrefab = tilePrefab;
-
         this.boardParent = boardParent;
-
         this.tileSize = tileSize;
-
         this.levelData = levelData;
         this.board = board;
     }
@@ -45,13 +38,13 @@ public class BoardRefiller
             int y = tile.Y;
 
             tiles[x, y] = null;
-
             Object.Destroy(tile.gameObject);
         }
     }
 
-    public void CollapseColumns()
+    public IEnumerator CollapseColumns()
     {
+        List<Tween> tweens = new();
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -62,27 +55,30 @@ public class BoardRefiller
                 for (int aboveY = y + 1; aboveY < height; aboveY++)
                 {
                     Tile aboveTile = tiles[x, aboveY];
-
                     if (aboveTile == null)
                         continue;
 
-                    MoveTileTo(aboveTile, x, y);
-
+                    Tween moveTween = MoveTileTo(aboveTile, x, y);
+                    tweens.Add(moveTween);
                     break;
                 }
             }
         }
+        foreach (Tween tween in tweens)
+        {
+            yield return tween.WaitForCompletion();
+        }
     }
 
-    public void MoveTileTo(Tile tile, int newX, int newY)
+    private Tween MoveTileTo(Tile tile, int newX, int newY)
     {
         tiles[tile.X, tile.Y] = null;
-
         tiles[newX, newY] = tile;
 
         tile.SetGridPosition(newX, newY);
 
-        tile.transform.position = GetWorldPosition(newX, newY);
+        Vector3 targetPosition = GetWorldPosition(newX, newY);
+        return tile.transform.DOMove(targetPosition, 0.4f).SetEase(Ease.OutBounce);
     }
 
     public void RefillBoard()
@@ -101,21 +97,20 @@ public class BoardRefiller
 
     private void SpawnNewTile(int x, int y)
     {
-        Vector3 spawnPosition = GetWorldPosition(x, y);
+        Vector3 targetPosition = GetWorldPosition(x, y);
+        Vector3 spawnPosition = targetPosition + Vector3.up * 2f;
 
         Tile spawned = Object.Instantiate(tilePrefab, spawnPosition, Quaternion.identity, boardParent);
-
         tiles[x, y] = spawned;
 
         SetupRandomTile(spawned, x, y);
+        spawned.transform.DOMove(targetPosition, 0.25f).SetEase(Ease.OutBounce);
     }
 
     private void SetupRandomTile(Tile tile, int x, int y)
     {
         int randomIndex = Random.Range(0, levelData.availableTiles.Count);
-
         TileData tileData = levelData.availableTiles[randomIndex];
-
         tile.Setup(x, y, tileData, board);
     }
 

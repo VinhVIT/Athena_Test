@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using DG.Tweening;
+using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
@@ -22,7 +23,16 @@ public class Tile : MonoBehaviour
 	}
 	public void SetSelected(bool selected)
 	{
-		spriteRenderer.color = selected ? Color.gray : Color.white;
+		spriteRenderer.color = selected ? new Color(1f, 1f, 0.8f) : Color.white;
+		transform.DOKill();
+		if (selected)
+		{
+			transform.DOScale(0.35f, 0.4f).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo);
+		}
+		else
+		{
+			transform.DOScale(0.3f, 0.1f).SetEase(Ease.OutQuad);
+		}
 	}
 	public void SetGridPosition(int x, int y)
 	{

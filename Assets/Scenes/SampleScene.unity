@@ -625,6 +625,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tilePrefab: {fileID: 1606303781153022275, guid: 3dd810be7a5c54540ab734cb8b8eae37, type: 3}
   scorePerMatch: 10
+  mainCamera: {fileID: 519420031}
+  floatingTextPrefab: {fileID: -5061224423389883853, guid: 9ff6f76db34fe1f44ae1608a4b44528a, type: 3}
+  worldCanvas: {fileID: 1084971676}
 --- !u!4 &199809329
 Transform:
   m_ObjectHideFlags: 0
