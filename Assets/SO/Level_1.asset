@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e116d32b3063c444a0490397e9a80c2, type: 3}
-  m_Name: Level3
+  m_Name: Level_1
   m_EditorClassIdentifier: 
-  width: 5
-  height: 7
+  width: 8
+  height: 8
   availableTiles:
   - {fileID: 11400000, guid: c55956d841c6c5844992832c859c65e7, type: 2}
   - {fileID: 11400000, guid: 32b1e35371461a64198c71964d7db5aa, type: 2}

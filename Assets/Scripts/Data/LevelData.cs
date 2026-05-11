@@ -4,9 +4,9 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Level", menuName = "Match3/Base Level")]
 public class LevelData : ScriptableObject
 {
-    public int width = 8;
-    public int height = 8;
+    [Range(1, 8)] public int width = 8;
+    [Range(1, 8)] public int height = 8;
     public List<TileData> availableTiles;
-    public int movesLimit = 25;
-    public int targetScore = 1500;
+    [Range(1, 50)] public int movesLimit = 25;
+    [Range(1500, 9999)] public int targetScore = 1500;
 }

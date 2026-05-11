@@ -67,6 +67,7 @@ Assets/Scripts/
   MatchFinder.cs
  Tile.cs
  UI/
+  GameplayUI.cs
   HUDPresenter.cs
   ScreenRouter.cs
 Temp/obj/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs

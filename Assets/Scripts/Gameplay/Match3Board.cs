@@ -73,7 +73,7 @@ public class Match3Board : MonoBehaviour
             }
         }
     }
-    private void ClearBoard()
+    public void ClearBoard()
     {
         if (tiles == null)
             return;
@@ -281,6 +281,13 @@ public class Match3Board : MonoBehaviour
         if (session.MovesLeft <= 0)
         {
             OnRunFinished?.Invoke(false);
+            ClearBoard();
+
         }
+    }
+    public void ForceWin()
+    {
+        OnRunFinished?.Invoke(true);
+        ClearBoard();
     }
 }

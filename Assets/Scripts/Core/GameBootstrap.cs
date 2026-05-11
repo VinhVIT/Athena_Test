@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class GameBootstrap : MonoBehaviour
 {
+    private const string CurrentLevelKey = "CURRENT_LEVEL";
     [SerializeField] private ScreenRouter screenRouter;
     [SerializeField] private HUDPresenter hudPresenter;
     [SerializeField] private Match3Board board;
@@ -25,13 +26,20 @@ public class GameBootstrap : MonoBehaviour
     public void StartLevel(int levelIndex)
     {
         currentLevel = Mathf.Clamp(levelIndex, 0, levels.Length - 1);
+        SaveCurrentLevel();
         var levelData = levels[currentLevel];
 
         levelSession.Start(currentLevel, levelData.movesLimit);
         board.Build(levelData);
         stateMachine.ChangeState(GameFlowState.Playing);
     }
+    public void ContinueGame()
+    {
+        if (!HasSave()) return;
 
+        int savedLevel = LoadCurrentLevel();
+        StartLevel(savedLevel);
+    }
     public void RetryLevel()
     {
         StartLevel(currentLevel);
@@ -42,9 +50,26 @@ public class GameBootstrap : MonoBehaviour
         var next = Mathf.Min(currentLevel + 1, levels.Length - 1);
         StartLevel(next);
     }
+    private void SaveCurrentLevel()
+    {
+        PlayerPrefs.SetInt(CurrentLevelKey, currentLevel);
+        PlayerPrefs.Save();
+    }
+
+    private int LoadCurrentLevel()
+    {
+        int savedLevel = PlayerPrefs.GetInt(CurrentLevelKey, 0);
+
+        return Mathf.Clamp(savedLevel, 0, levels.Length - 1);
+    }
+    public bool HasSave()
+    {
+        return PlayerPrefs.HasKey(CurrentLevelKey);
+    }
     public void BackToMenu()
     {
         stateMachine.ChangeState(GameFlowState.Menu);
+        board.ClearBoard();
     }
     public void OnBoardRunFinished(bool win)
     {
@@ -53,6 +78,10 @@ public class GameBootstrap : MonoBehaviour
         screenRouter.ShowResult(win);
     }
 
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(CurrentLevelKey);
+    }
     private void OnStateChanged(GameFlowState previous, GameFlowState next)
     {
         switch (next)
