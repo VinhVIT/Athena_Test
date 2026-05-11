@@ -54,22 +54,24 @@ Assets/Scripts/Core/
  GameBootstrap.cs
  GameStateMachine.cs
  LevelSession.cs
+ SoundManager.cs
 Assets/Scripts/Data/
  LevelData.cs
  TileData.cs
+Assets/Scripts/Gameplay/
+ BoardRefiller.cs
+ BoardShuffler.cs
+ BoardView.cs
+ Match3Board.cs
+ MatchFinder.cs
 Assets/Scripts/
- FloatingText.cs
- Gameplay/
-  BoardRefiller.cs
-  BoardShuffler.cs
-  BoardView.cs
-  Match3Board.cs
-  MatchFinder.cs
  Tile.cs
  UI/
+  FloatingText.cs
   GameplayUI.cs
   HUDPresenter.cs
   ScreenRouter.cs
+  ScreenTransition.cs
 Temp/obj/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs
 
 [metadataReferences]

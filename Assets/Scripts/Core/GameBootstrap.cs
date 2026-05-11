@@ -4,6 +4,7 @@ public class GameBootstrap : MonoBehaviour
 {
     private const string CurrentLevelKey = "CURRENT_LEVEL";
     [SerializeField] private ScreenRouter screenRouter;
+    [SerializeField] private ScreenTransition screenTransition;
     [SerializeField] private HUDPresenter hudPresenter;
     [SerializeField] private Match3Board board;
     [SerializeField] private LevelData[] levels;
@@ -25,13 +26,16 @@ public class GameBootstrap : MonoBehaviour
 
     public void StartLevel(int levelIndex)
     {
-        currentLevel = Mathf.Clamp(levelIndex, 0, levels.Length - 1);
-        SaveCurrentLevel();
-        var levelData = levels[currentLevel];
+        screenTransition.FadeTransition(() =>
+        {
+            currentLevel = Mathf.Clamp(levelIndex, 0, levels.Length - 1);
+            SaveCurrentLevel();
 
-        levelSession.Start(currentLevel, levelData.movesLimit);
-        board.Build(levelData);
-        stateMachine.ChangeState(GameFlowState.Playing);
+            var levelData = levels[currentLevel];
+            levelSession.Start(currentLevel, levelData.movesLimit);
+            board.Build(levelData);
+            stateMachine.ChangeState(GameFlowState.Playing);
+        });
     }
     public void ContinueGame()
     {
@@ -68,14 +72,21 @@ public class GameBootstrap : MonoBehaviour
     }
     public void BackToMenu()
     {
-        stateMachine.ChangeState(GameFlowState.Menu);
-        board.ClearBoard();
+        screenTransition.FadeTransition(() =>
+        {
+            stateMachine.ChangeState(GameFlowState.Menu);
+            board.ClearBoard();
+        });
+
     }
     public void OnBoardRunFinished(bool win)
     {
-        levelSession.Finish(win);
-        stateMachine.ChangeState(GameFlowState.Result);
-        screenRouter.ShowResult(win);
+        screenTransition.FadeTransition(() =>
+        {
+            levelSession.Finish(win);
+            stateMachine.ChangeState(GameFlowState.Result);
+            screenRouter.ShowResult(win);
+        });
     }
 
     public void ResetProgress()

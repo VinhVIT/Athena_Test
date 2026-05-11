@@ -204,14 +204,10 @@ public class Match3Board : MonoBehaviour
             // Animate back
             yield return boardView.AnimateSwap(firstTile, secondTile);
 
-            Debug.Log("INVALID SWAP");
-
             IsShifting = false;
 
             yield break;
         }
-
-        Debug.Log("VALID SWAP");
 
         session.ConsumeMove();
 
@@ -239,6 +235,7 @@ public class Match3Board : MonoBehaviour
     }
     private IEnumerator ProcessMatches(List<Tile> matchedTiles, int combo = 1)
     {
+        SoundManager.Instance.PlayMatch();
         int gainedScore = matchedTiles.Count * scorePerMatch * combo;
         session.AddScore(gainedScore);
         boardView.UpdateScore(session.Score);
@@ -274,12 +271,14 @@ public class Match3Board : MonoBehaviour
     {
         if (session.Score >= currentLevelData.targetScore)
         {
+            SoundManager.Instance.PlayWin();
             OnRunFinished?.Invoke(true);
             ClearBoard();
             return;
         }
         if (session.MovesLeft <= 0)
         {
+            SoundManager.Instance.PlayLose();
             OnRunFinished?.Invoke(false);
             ClearBoard();
 
