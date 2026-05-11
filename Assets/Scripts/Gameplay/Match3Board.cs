@@ -3,15 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Match3Board : MonoBehaviour
 {
     [Header("Board")]
     [SerializeField] private Tile tilePrefab;
     [SerializeField] private int scorePerMatch = 10;
-    [SerializeField] private Camera mainCamera;
-    [SerializeField] private FloatingText floatingTextPrefab;
-    [SerializeField] private Canvas worldCanvas;
+    [SerializeField] private BoardView boardView;
     private LevelSession session;
     private LevelData currentLevelData;
     private Tile[,] tiles;
@@ -38,8 +37,11 @@ public class Match3Board : MonoBehaviour
 
         tileSize = tilePrefab.GetComponent<SpriteRenderer>().bounds.size;
 
+        boardView.SetupScore(session.Score, currentLevelData.targetScore);
+
         ClearBoard();
         CreateBoard();
+        boardView.SetupBoardBackground(width, height, tileSize, transform);
         matchFinder = new MatchFinder(tiles, width, height);
         boardShuffler = new BoardShuffler(tiles, width, height, matchFinder, this);
         boardRefiller = new BoardRefiller(tiles, width, height, tilePrefab, transform,
@@ -71,7 +73,6 @@ public class Match3Board : MonoBehaviour
             }
         }
     }
-
     private void ClearBoard()
     {
         if (tiles == null)
@@ -83,6 +84,7 @@ public class Match3Board : MonoBehaviour
                 Destroy(tile.gameObject);
             }
         }
+        boardView.HideBoardBackground();
     }
 
     private void SetupRandomTileWithoutMatch(Tile tile, int x, int y)
@@ -185,7 +187,7 @@ public class Match3Board : MonoBehaviour
         SwapGrid(firstTile, secondTile);
 
         // Play swap animation
-        yield return AnimateSwap(firstTile, secondTile);
+        yield return boardView.AnimateSwap(firstTile, secondTile);
 
         List<Tile> matchedTiles = new();
 
@@ -200,7 +202,7 @@ public class Match3Board : MonoBehaviour
             SwapGrid(firstTile, secondTile);
 
             // Animate back
-            yield return AnimateSwap(firstTile, secondTile);
+            yield return boardView.AnimateSwap(firstTile, secondTile);
 
             Debug.Log("INVALID SWAP");
 
@@ -239,16 +241,18 @@ public class Match3Board : MonoBehaviour
     {
         int gainedScore = matchedTiles.Count * scorePerMatch * combo;
         session.AddScore(gainedScore);
+        boardView.UpdateScore(session.Score);
+
         Vector3 centerPosition = matchedTiles[0].transform.position;
-        ShowScoreText(centerPosition, gainedScore);
+        boardView.ShowScoreText(centerPosition, gainedScore);
         if (combo > 1)
         {
-            ShowComboText(matchedTiles[0].transform.position, combo);
+            boardView.ShowComboText(matchedTiles[0].transform.position, combo);
         }
 
-        yield return AnimateDestroy(matchedTiles);
+        yield return boardView.AnimateDestroy(matchedTiles);
         boardRefiller.DestroyMatches(matchedTiles);
-        mainCamera.transform.DOShakePosition(0.1f, 0.08f);
+        boardView.ShakeCamera();
 
         yield return StartCoroutine(boardRefiller.CollapseColumns());
         boardRefiller.RefillBoard();
@@ -271,6 +275,7 @@ public class Match3Board : MonoBehaviour
         if (session.Score >= currentLevelData.targetScore)
         {
             OnRunFinished?.Invoke(true);
+            ClearBoard();
             return;
         }
         if (session.MovesLeft <= 0)
@@ -278,47 +283,4 @@ public class Match3Board : MonoBehaviour
             OnRunFinished?.Invoke(false);
         }
     }
-    #region Animate
-    private IEnumerator AnimateSwap(Tile a, Tile b)
-    {
-        Vector3 aPosition = a.transform.position;
-        Vector3 bPosition = b.transform.position;
-
-        Tween moveA = a.transform.DOMove(bPosition, 0.15f).SetEase(Ease.OutQuad);
-        Tween moveB = b.transform.DOMove(aPosition, 0.15f).SetEase(Ease.OutQuad);
-
-        yield return moveA.WaitForCompletion();
-        yield return moveB.WaitForCompletion();
-    }
-    private IEnumerator AnimateDestroy(List<Tile> matchedTiles)
-    {
-        List<Tween> tweens = new();
-        foreach (Tile tile in matchedTiles)
-        {
-            if (tile == null)
-                continue;
-            tile.transform.DOPunchScale(Vector3.one * 0.2f, 0.15f);
-            Tween scaleTween = tile.transform.DOScale(Vector3.zero, 0.15f).SetEase(Ease.InBack);
-            tweens.Add(scaleTween);
-        }
-        foreach (Tween tween in tweens)
-        {
-            yield return tween.WaitForCompletion();
-        }
-    }
-    private void ShowScoreText(Vector3 worldPosition, int score)
-    {
-        Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition);
-        FloatingText text = Instantiate(floatingTextPrefab, screenPosition,
-            Quaternion.identity, worldCanvas.transform);
-        text.Setup($"+{score}", Color.yellow);
-    }
-    private void ShowComboText(Vector3 worldPosition, int combo)
-    {
-        Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition + Vector3.up * 0.5f);
-        FloatingText text = Instantiate(floatingTextPrefab, screenPosition,
-            Quaternion.identity, worldCanvas.transform);
-        text.Setup($"COMBO x{combo}", Color.red);
-    }
-    #endregion
 }

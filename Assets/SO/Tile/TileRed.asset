@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: TileRed
   m_EditorClassIdentifier: 
   type: 0
-  sprite: {fileID: 21300000, guid: fbdc2dd4941e61244980c24b6aaea0de, type: 3}
+  sprite: {fileID: 21300000, guid: b7481a4c424715542a70ac1efc7468db, type: 3}

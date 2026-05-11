@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: TileGreen
   m_EditorClassIdentifier: 
   type: 2
-  sprite: {fileID: 21300000, guid: e3169e90983853d4d9d73233512118e2, type: 3}
+  sprite: {fileID: 21300000, guid: 50dd2e8acaa7426438d693e39eb73026, type: 3}

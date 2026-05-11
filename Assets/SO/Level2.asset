@@ -19,5 +19,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 32b1e35371461a64198c71964d7db5aa, type: 2}
   - {fileID: 11400000, guid: 4fa81965c48486a4db6ac18740ae7879, type: 2}
   - {fileID: 11400000, guid: 2f582280bc4b5374a8ffaa86c667f23f, type: 2}
+  - {fileID: 11400000, guid: 98a021b79de9cd348b1c220fb2437bd7, type: 2}
   movesLimit: 25
   targetScore: 1500

@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: TilePurple
   m_EditorClassIdentifier: 
   type: 4
-  sprite: {fileID: 21300000, guid: 6e84ec6047673d440aa377e4980bfea8, type: 3}
+  sprite: {fileID: 21300000, guid: fbb6c45b2e0f5424cace793121f03e56, type: 3}
